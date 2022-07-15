@@ -125,3 +125,16 @@ db_create_index(gene_pool_2022, 'gene_IDs', 'ID')
 
 dbWriteTable(gene_pool_2022, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
 ```
+
+```{r}
+#Loading in Rdata
+load("/Users/parikhpp/git/eyeIntegration_app/ppeyeintegration/www/scEiaD_CT_table.Rdata")
+names(scEiaD_CT_table) <- c("Gene", "CellType_predict", "organism", "study_accession", "Stage", "Cell # Detected", "Total Cells", "% of Cells Detected", "Meanlog2(Counts+1)")
+
+#Creating scEiaD database
+scEiaD_pool <- dbConnect(RSQLite::SQLite(), dbname = "scEiaD.sqlite")
+
+#Writing the tables
+dbWriteTable(scEiaD_pool, 'scEiaD_CT_table', scEiaD_CT_table, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(scEiaD_pool, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
+```
