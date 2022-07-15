@@ -1,0 +1,274 @@
+---
+title: "BigWig Files"
+author: "Prashit Parikh"
+date: "12/28/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+chooseCRANmirror(graphics=FLASE, ind=1)
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("readr")
+library(readr)
+#install.packages("dplyr")
+library(dplyr)
+#if (!requireNamespace("BiocManager", quietly = TRUE)) {
+#   install.packages("BiocManager")
+#}
+#BiocManager::install("recount3")
+library(recount3)
+recount3_cache_rm()
+options(recount3_url = "http://duffel.rail.bio/recount3")
+human_projects<-available_projects()
+```
+
+```{r pulling ei data, include=FALSE}
+#combined_metadata metadata was downloaded from the official project website
+combined_metadata <- read_delim("combined_metadata.csv", escape_double = FALSE, trim_ws = TRUE, col_types = cols(...1 = col_skip()))
+#Finding all study accessions in combined_metadata
+with(combined_metadata, table(combined_metadata$study_accession))
+```
+
+```{r pulling recount3 data, include=FALSE}
+#Obtaining recount data for samples which are in both combined_metadata and recount3
+#Function for downloading recount3 data
+#E-MTAB-4377 -- Not in recount3
+#ERP022243
+ERP022243_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/43/ERP022243/sra.gene_sums.ERP022243.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP002881
+SRP002881_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/81/SRP002881/sra.gene_sums.SRP002881.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP011895
+SRP011895_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/95/SRP011895/sra.gene_sums.SRP011895.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP012585
+SRP012585_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/85/SRP012585/sra.gene_sums.SRP012585.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP012682 -- Not using because this is gtex
+#SRP015336
+SRP015336_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/36/SRP015336/sra.gene_sums.SRP015336.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP016140
+SRP016140_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/40/SRP016140/sra.gene_sums.SRP016140.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP018405 -- Not in recount3
+#SRP034875
+SRP034875_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/75/SRP034875/sra.gene_sums.SRP034875.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP035641
+SRP035641_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/41/SRP035641/sra.gene_sums.SRP035641.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP045639
+SRP045639_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/39/SRP045639/sra.gene_sums.SRP045639.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP053034
+SRP053034_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/34/SRP053034/sra.gene_sums.SRP053034.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP055101
+SRP055101_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/01/SRP055101/sra.gene_sums.SRP055101.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP056957 -- Not in recount3
+#SRP057295 -- Not in recount3
+#SRP061670
+SRP061670_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/70/SRP061670/sra.gene_sums.SRP061670.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP062870
+SRP062870_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/70/SRP062870/sra.gene_sums.SRP062870.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP064956
+SRP064956_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/56/SRP064956/sra.gene_sums.SRP064956.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP070148
+SRP070148_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/48/SRP070148/sra.gene_sums.SRP070148.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP070938 -- Not in recount3
+#SRP075990
+SRP075990_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/90/SRP075990/sra.gene_sums.SRP075990.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP079002
+SRP079002_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/02/SRP079002/sra.gene_sums.SRP079002.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP080002
+SRP080002_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/02/SRP080002/sra.gene_sums.SRP080002.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP080886 -- Not in recount3
+#SRP090027 (Mismatch between eyeIntegration and recount3 so monorail used)
+#SRP090040 (Mismatch between eyeIntegration and recount3 so monorail used)
+#SRP090226
+SRP090226_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/26/SRP090226/sra.gene_sums.SRP090226.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP091605
+SRP091605_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/05/SRP091605/sra.gene_sums.SRP091605.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP091675
+SRP091675_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/75/SRP091675/sra.gene_sums.SRP091675.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP092413
+SRP092413_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/13/SRP092413/sra.gene_sums.SRP092413.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP093877
+SRP093877_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/77/SRP093877/sra.gene_sums.SRP093877.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP094572
+SRP094572_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/72/SRP094572/sra.gene_sums.SRP094572.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP097696
+SRP097696_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/96/SRP097696/sra.gene_sums.SRP097696.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP098761
+SRP098761_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/61/SRP098761/sra.gene_sums.SRP098761.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP105756
+SRP105756_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/56/SRP105756/sra.gene_sums.SRP105756.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP106457
+SRP106457_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/57/SRP106457/sra.gene_sums.SRP106457.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP108292
+SRP108292_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/92/SRP108292/sra.gene_sums.SRP108292.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP110135
+SRP110135_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/35/SRP110135/sra.gene_sums.SRP110135.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP111145
+SRP111145_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/45/SRP111145/sra.gene_sums.SRP111145.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP115908
+SRP115908_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/08/SRP115908/sra.gene_sums.SRP115908.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP117613
+SRP117613_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/13/SRP117613/sra.gene_sums.SRP117613.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP119291
+SRP119291_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/91/SRP119291/sra.gene_sums.SRP119291.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP119766
+SRP119766_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/66/SRP119766/sra.gene_sums.SRP119766.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP151763
+SRP151763_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/63/SRP151763/sra.gene_sums.SRP151763.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+#SRP159246
+SRP159246_counts <- read_delim("http://idies.jhu.edu/recount3/data/human/data_sources/sra/gene_sums/46/SRP159246/sra.gene_sums.SRP159246.G029.gz", 
+    delim = "\t", escape_double = FALSE, 
+    comment = "#", trim_ws = TRUE)
+```
+
+```{r left joining ei and recount3 mutual samples, include=FALSE}
+#Finding which run_accession codes exist in combined_metadata
+
+recount3_counts <- ERP022243_counts %>% left_join(SRP002881_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP011895_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP012585_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP015336_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP016140_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP034875_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP035641_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP045639_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP053034_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP055101_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP061670_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP062870_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP064956_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP070148_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP075990_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP079002_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP080002_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP090226_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP091605_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP091675_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP092413_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP093877_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP094572_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP097696_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP098761_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP105756_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP106457_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP108292_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP110135_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP111145_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP115908_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP117613_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP119291_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP119766_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP151763_counts, by="gene_id")
+recount3_counts <- recount3_counts %>% left_join(SRP159246_counts, by="gene_id")
+
+#Finding which data is in both combined_metadata and recount3
+run_accessions <- intersect(names(recount3_counts), combined_metadata$run_accession)
+
+recount3_counts_final <- recount3_counts %>% select(one_of(c("gene_id", run_accessions)))
+```
+
+```{r}
+#metadata
+sample <- colnames(recount3_counts)
+sample <- sample[-1]
+
+project <- c(rep("ERP022243", 12), "SRP002881", rep("SRP011895", 12), rep("SRP012585", 10), rep("SRP015336", 3), rep("SRP016140", 5), rep("SRP034875", 33), rep("SRP035641", 8), rep("SRP045639", 12), rep("SRP053034", 6), rep("SRP055101", 15), rep("SRP061670", 5), rep("SRP062870", 12), rep("SRP064956", 4), rep("SRP070148", 132), rep("SRP075990", 6), rep("SRP079002", 6), rep("SRP080002", 2), rep("SRP090226", 2), rep("SRP091605", 8), rep("SRP091675", 6), rep("SRP092413", 41), rep("SRP093877", 13), rep("SRP094572", 14), rep("SRP097696", 13), rep("SRP098761", 32), rep("SRP105756", 32), rep("SRP106457", 4), rep("SRP108292", 48), rep("SRP110135", 3), rep("SRP111145", 24), rep("SRP115908", 21), rep("SRP117613", 6), rep("SRP119291", 8), rep("SRP119766", 25), rep("SRP151763", 523), rep("SRP159246", 31))
+
+bigwig_metadata <- data.frame(sample, project)
+
+run_accessions <- intersect(bigwig_metadata$sample, combined_metadata$run_accession)
+bigwig_metadata_final <- bigwig_metadata[is.element(bigwig_metadata$sample, run_accessions), ]
+
+write.csv(bigwig_metadata_final, file="bigwig_metadata_final.csv")
+```
+
+```{r}
+urls <- matrix(NA, nrow=nrow(bigwig_metadata_final), ncol=1)
+
+for (i in 1:nrow(bigwig_metadata_final)) {
+  url <- locate_url(
+    bigwig_metadata_final[i, 2],
+    "data_sources/sra",
+    type = "bw",
+    sample = bigwig_metadata_final[i, ]
+  )
+  urls[i] <- url
+}
+```
+
+```{r}
+urls <- paste("wget", urls[1:nrow(urls)])
+write.csv(urls, file="bigwigs.csv")
+```

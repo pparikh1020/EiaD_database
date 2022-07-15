@@ -1,0 +1,164 @@
+---
+title: "GTEX BigWig Files"
+author: "Prashit Parikh"
+date: "3/8/2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+chooseCRANmirror(graphics=FLASE, ind=1)
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("readr")
+library(readr)
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("Rtsne")
+library(Rtsne)
+#install.packages("plotly")
+library(plotly)
+#install.packages("umap")
+library(umap)
+#install.packages("tibble")
+library(tibble)
+#install.packages("stringr")
+library(stringr)
+#install.packages("patchwork")
+library(patchwork)
+#if (!requireNamespace("BiocManager", quietly = TRUE)) {
+#   install.packages("BiocManager")
+#}
+#BiocManager::install("recount3")
+library(recount3)
+recount3_cache_rm()
+options(recount3_url = "http://duffel.rail.bio/recount3")
+human_projects<-available_projects()
+```
+
+```{r pulling ei data, include=FALSE}
+#2019 eyeIntegration metadata was downloaded from the official project website
+eyeIntegration19 <- read_delim("https://hpc.nih.gov/~mcgaugheyd/eyeIntegration/2019_metadata_04.tsv.gz", "\t", escape_double = FALSE, trim_ws = TRUE)
+eyeIntegration19 <- eyeIntegration19 %>% filter(study_accession == "SRP012682")
+```
+
+```{r}
+proj <- human_projects[human_projects$file_source == "gtex",]
+
+adipose_tissue <- create_rse(proj[1,], "gene", annotation = "gencode_v29")
+muscle <- create_rse(proj[2,], "gene", annotation = "gencode_v29")
+blood_vessel <- create_rse(proj[3,], "gene", annotation = "gencode_v29")
+heart <- create_rse(proj[4,], "gene", annotation = "gencode_v29")
+ovary <- create_rse(proj[5,], "gene", annotation = "gencode_v29")
+uterus <- create_rse(proj[6,], "gene", annotation = "gencode_v29")
+vagina <- create_rse(proj[7,], "gene", annotation = "gencode_v29")
+breast <- create_rse(proj[8,], "gene", annotation = "gencode_v29")
+skin <- create_rse(proj[9,], "gene", annotation = "gencode_v29")
+salivary_gland <- create_rse(proj[10,], "gene", annotation = "gencode_v29")
+brain <- create_rse(proj[11,], "gene", annotation = "gencode_v29")
+adrenal_gland <- create_rse(proj[12,], "gene", annotation = "gencode_v29")
+thyroid <- create_rse(proj[13,], "gene", annotation = "gencode_v29")
+lung <- create_rse(proj[14,], "gene", annotation = "gencode_v29")
+spleen <- create_rse(proj[15,], "gene", annotation = "gencode_v29")
+pancreas <- create_rse(proj[16,], "gene", annotation = "gencode_v29")
+esophagus <- create_rse(proj[17,], "gene", annotation = "gencode_v29")
+stomach <- create_rse(proj[18,], "gene", annotation = "gencode_v29")
+colon <- create_rse(proj[19,], "gene", annotation = "gencode_v29")
+small_intestine <- create_rse(proj[20,], "gene", annotation = "gencode_v29")
+prostate <- create_rse(proj[21,], "gene", annotation = "gencode_v29")
+testis <- create_rse(proj[22,], "gene", annotation = "gencode_v29")
+nerve <- create_rse(proj[23,], "gene", annotation = "gencode_v29")
+pituitary <- create_rse(proj[24,], "gene", annotation = "gencode_v29")
+blood <- create_rse(proj[25,], "gene", annotation = "gencode_v29")
+liver <- create_rse(proj[26,], "gene", annotation = "gencode_v29")
+kidney <- create_rse(proj[27,], "gene", annotation = "gencode_v29")
+cervix_uteri <- create_rse(proj[28,], "gene", annotation = "gencode_v29")
+fallopian_tube <- create_rse(proj[29,], "gene", annotation = "gencode_v29")
+bladder <- create_rse(proj[30,], "gene", annotation = "gencode_v29")
+study_na <- create_rse(proj[31,], "gene", annotation = "gencode_v29")
+bone_marrow <- create_rse(proj[32,], "gene", annotation = "gencode_v29")
+```
+
+```{r}
+adipose_tissue_df <- as.data.frame(colData(adipose_tissue)[, c("external_id", "study", "BigWigURL")])
+muscle_df <- as.data.frame(colData(muscle)[, c("external_id", "study", "BigWigURL")])
+blood_vessel_df <- as.data.frame(colData(blood_vessel)[, c("external_id", "study", "BigWigURL")])
+heart_df <- as.data.frame(colData(heart)[, c("external_id", "study", "BigWigURL")])
+ovary_df <- as.data.frame(colData(ovary)[, c("external_id", "study", "BigWigURL")])
+uterus_df <- as.data.frame(colData(uterus)[, c("external_id", "study", "BigWigURL")])
+vagina_df <- as.data.frame(colData(vagina)[, c("external_id", "study", "BigWigURL")])
+breast_df <- as.data.frame(colData(breast)[, c("external_id", "study", "BigWigURL")])
+skin_df <- as.data.frame(colData(skin)[, c("external_id", "study", "BigWigURL")])
+salivary_gland_df <- as.data.frame(colData(salivary_gland)[, c("external_id", "study", "BigWigURL")])
+brain_df <- as.data.frame(colData(brain)[, c("external_id", "study", "BigWigURL")])
+adrenal_gland_df <- as.data.frame(colData(adrenal_gland)[, c("external_id", "study", "BigWigURL")])
+thyroid_df <- as.data.frame(colData(thyroid)[, c("external_id", "study", "BigWigURL")])
+lung_df <- as.data.frame(colData(lung)[, c("external_id", "study", "BigWigURL")])
+spleen_df <- as.data.frame(colData(spleen)[, c("external_id", "study", "BigWigURL")])
+pancreas_df <- as.data.frame(colData(pancreas)[, c("external_id", "study", "BigWigURL")])
+esophagus_df <- as.data.frame(colData(esophagus)[, c("external_id", "study", "BigWigURL")])
+stomach_df <- as.data.frame(colData(stomach)[, c("external_id", "study", "BigWigURL")])
+colon_df <- as.data.frame(colData(colon)[, c("external_id", "study", "BigWigURL")])
+small_intestine_df <- as.data.frame(colData(small_intestine)[, c("external_id", "study", "BigWigURL")])
+prostate_df <- as.data.frame(colData(prostate)[, c("external_id", "study", "BigWigURL")])
+testis_df <- as.data.frame(colData(testis)[, c("external_id", "study", "BigWigURL")])
+nerve_df <- as.data.frame(colData(nerve)[, c("external_id", "study", "BigWigURL")])
+pituitary_df <- as.data.frame(colData(pituitary)[, c("external_id", "study", "BigWigURL")])
+blood_df <- as.data.frame(colData(blood)[, c("external_id", "study", "BigWigURL")])
+liver_df <- as.data.frame(colData(liver)[, c("external_id", "study", "BigWigURL")])
+kidney_df <- as.data.frame(colData(kidney)[, c("external_id", "study", "BigWigURL")])
+cervix_uteri_df <- as.data.frame(colData(cervix_uteri)[, c("external_id", "study", "BigWigURL")])
+fallopian_tube_df <- as.data.frame(colData(fallopian_tube)[, c("external_id", "study", "BigWigURL")])
+bladder_df <- as.data.frame(colData(bladder)[, c("external_id", "study", "BigWigURL")])
+study_na_df <- as.data.frame(colData(study_na)[, c("external_id", "study", "BigWigURL")]) #Not including as we only want recount3 labeled tissues within our study
+bone_marrow_df <- as.data.frame(colData(bone_marrow)[, c("external_id", "study", "BigWigURL")])
+
+gtex_data <- bind_rows(adipose_tissue_df, muscle_df, blood_vessel_df, heart_df, ovary_df, uterus_df, vagina_df, breast_df, skin_df, salivary_gland_df, brain_df, adrenal_gland_df, thyroid_df, lung_df, spleen_df, pancreas_df, esophagus_df, stomach_df, colon_df, small_intestine_df, prostate_df, testis_df, nerve_df, pituitary_df, blood_df, liver_df, kidney_df, cervix_uteri_df, fallopian_tube_df, bladder_df, bone_marrow_df)
+
+#Figuring out which samples we actually need
+eyeIntegration19 <- eyeIntegration19 %>% mutate(gtex_external_id_a = str_extract(sample_attribute, "GTEX-[A-Z0-9]+-[0-9]+-SM-[A-Z0-9]+"))
+eyeIntegration19 <- eyeIntegration19 %>% mutate(gtex_external_id_b = str_extract(sample_attribute, "GTEX-[A-Z0-9]+-[0-9]+-[a-zA-Z0-9]+-SM-[A-Z0-9]+"))
+eyeIntegration19 <- eyeIntegration19 %>% mutate(gtex_external_id_c = str_extract(sample_attribute, "K-[A-Z0-9]+-SM-[A-Z0-9]+"))
+eyeIntegration19 <- eyeIntegration19 %>% mutate(gtex_external_id = ifelse((is.na(gtex_external_id_a)), 
+                                                                            ifelse((is.na(gtex_external_id_b)), gtex_external_id_c, gtex_external_id_b),
+                                                                            gtex_external_id_a))
+
+gtex_data <- gtex_data %>% mutate(gtex_external_id_a = str_extract(external_id, "GTEX-[A-Z0-9]+-[0-9]+-SM-[A-Z0-9]+"))
+gtex_data <- gtex_data %>% mutate(gtex_external_id_b = str_extract(external_id, "GTEX-[A-Z0-9]+-[0-9]+-[a-zA-Z0-9]+-SM-[A-Z0-9]+"))
+gtex_data <- gtex_data %>% mutate(gtex_external_id_c = str_extract(external_id, "K-[A-Z0-9]+-SM-[A-Z0-9]+"))
+gtex_data <- gtex_data %>% mutate(gtex_external_id = ifelse((is.na(gtex_external_id_a)), 
+                                                                            ifelse((is.na(gtex_external_id_b)), gtex_external_id_c, gtex_external_id_b),
+                                                                            gtex_external_id_a))
+
+gtex_ids <- intersect(gtex_data$gtex_external_id, eyeIntegration19$gtex_external_id)
+
+gtex_data_final <- gtex_data %>% filter(gtex_external_id %in% gtex_ids)
+```
+
+```{r}
+write.csv(gtex_data_final, file = "gtex_data_final.csv")
+write.csv(gtex_data, file = "gtex_data_preliminary.csv")
+```
+
+```{r}
+gtex_data_final <- read.csv("gtex_data_final.csv")
+
+urls <- matrix(NA, nrow=nrow(gtex_data_final), ncol=1)
+
+for (i in 1:nrow(gtex_data_final)) {
+  url <- locate_url(
+    gtex_data_final[i, 3,],
+    "data_sources/gtex",
+    type = "bw",
+    sample = gtex_data_final[i, 2]
+  )
+  urls[i] <- url
+}
+```
+
+```{r}
+urls <- paste("wget", urls[1:nrow(urls)])
+write.csv(urls, file="gtex_bigwigs.csv")
+```

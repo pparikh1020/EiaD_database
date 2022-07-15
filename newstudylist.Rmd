@@ -1,0 +1,30 @@
+---
+title: "newstudylist"
+author: "Prashit Parikh"
+date: "2/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+install.packages("readr")
+library(readr)
+install.packages("dplyr")
+library(dplyr)
+install.packages("stringr")
+library(stringr)
+```
+
+
+```{r pulling new study data, include=FALSE}
+#Pulling in new studies which will be added to eyeIntegration
+new <- read_csv("newstudylist.csv", col_types = cols(...1 = col_skip()))
+newkeep <- new %>% filter(retain == "yes" | retain == "yes?")
+#These projects will be added to our database
+newkeep <- newkeep[!duplicated(newkeep$Run), ]
+table(newkeep$SRA.Study)
+#These samples will be run through the monorail unifier and pump to obtain gene counts
+newkeep$Run
+
+#write.csv(newkeep, file="newstudylist.csv")
+```
