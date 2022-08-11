@@ -35,7 +35,7 @@ create_gtex_count_data_frames("http://duffel.rail.bio/recount3/",
                                 "SMALL_INTESTINE", "PROSTATE", "TESTIS", "NERVE", "PITUITARY", "BLOOD",
                                 "LIVER", "KIDNEY",   "CERVIX_UTERI", "FALLOPIAN_TUBE", "BLADDER", "BONE_MARROW"),
                               "gtex_transformed_counts",
-                              "aggregatedgtex_transformed_counts",
+                              "aggregated_gtex_transformed_counts",
                               eyeIntegration22)
 
 ###Downloading count data from the "local" database (Either not included in recount3 or run locally using the Monorail RNA-seq processing pipeline) -----
