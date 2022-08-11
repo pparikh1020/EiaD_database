@@ -72,10 +72,10 @@ create_count_data_frames <-
     long_counts_subset <- counts_subset %>% pivot_longer(-gene_id)
     names(long_counts_subset) <- c("gene_id", "run_accession", "value")
     #Joining metadata for aggregation
-    long_counts_subset_srs <- long_counts_subset %>% left_join(metadata %>% select(sample_accession, run_accession),
-                                                               by = c('run_accession')) %>% 
-      group_by(sample_accession, gene_id) %>% 
-      summarise(value = mean(value))
+    long_counts_meta <- long_counts_subset %>% left_join(metadata %>% select(sample_accession, run_accession),
+                                                  by = c('run_accession'))
+    long_counts_meta <- data.table(long_counts_meta)
+    long_counts_subset_srs <- long_counts_meta[, Mean:=mean(value), by='sample_accession']
     
     aggregated_counts_data_list[[i]] <- long_counts_subset_srs
   }
@@ -152,10 +152,10 @@ create_gtex_count_data_frames <- function(recount3_library_url, projects_vector,
   long_counts <- counts_data_frame_final %>% pivot_longer(-gene_id)
   names(long_counts) <- c("gene_id", "run_accession", "value")
   #Joining metadata for aggregation
-  long_counts_srs <- long_counts %>% left_join(metadata %>% select(sample_accession, run_accession),
-                                               by = c('run_accession')) %>% 
-    group_by(sample_accession, gene_id) %>% 
-    summarise(value = mean(value))
+  long_counts_meta <- long_counts %>% left_join(metadata %>% select(sample_accession, run_accession),
+                                               by = c('run_accession'))
+  long_counts_meta <- data.table(long_counts_meta)
+  long_counts_srs <- long_counts_meta[, Mean:=mean(value), by='sample_accession']
   
   aggregated_counts_data_list[[i]] <- long_counts_srs
   

@@ -1,39 +1,27 @@
----
-title: "Creating_Combined_Metadata"
-author: "Prashit Parikh"
-date: "2/8/2022"
-output: html_document
-editor_options: 
-  chunk_output_type: console
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-#install.packages("readr")
-library(readr)
-#install.packages("stringr")
-library(stringr)
-#install.packages("XML")
+### Downloading relevant packages -----
 library(XML)
-#install.packages("reutils")
 library(reutils)
-#install.packages("tidyverse")
 library(tidyverse)
-```
 
-```{r}
-eyeIntegration19_metadata <- read_delim("https://hpc.nih.gov/~mcgaugheyd/eyeIntegration/2019_metadata_04.tsv.gz",
-                               "\t", escape_double = FALSE, trim_ws = TRUE)
-newstudylist <- read_csv("newstudylist.csv")
-newstudylist <- newstudylist[,-c(1)]
+### Creating eyeIntegration22 -----
+eyeIntegration19_metadata <- vroom::vroom("https://hpc.nih.gov/~mcgaugheyd/eyeIntegration/2019_metadata_04.tsv.gz",
+                                        "\t", escape_double = FALSE, trim_ws = TRUE)
+newstudylist <- read_csv("newstudylist.csv", col_types = cols(...1 = col_skip()))
 #Renaming to match eyeIntegration data
-names(newstudylist) <- c("run_accession", "Assay.Type", "AvgSpotLen", "Bases", "BioProject", "BioSample", "Bytes", "Center.Name", "Consent", "DATASTORE.filetype", "DATASTORE.provider", "DATASTORE.region", "Donor", "Experiment", "GEO_Accession..exp.", "Instrument", "LibraryLayout", "LibrarySelection", "LibrarySource", "Organism", "Platform", "region", "ReleaseDate", "Sample.Name", "source_name", "study_accession", "Tissue", "Kept", "Cell_type", "patient_diagnosis", "disease_state", "disease", "prognosis", "cell_line", "developmental_stage", "Genotype", "treatment", "cell_type", "age", "sex", "batch", "biomaterial_provider", "BioSampleModel", "Isolate", "Library.Name", "Replicate", "health_state", "Sample_Type", "Phenotype", "secondary_id")
+names(newstudylist) <- c("run_accession", "Assay.Type", "AvgSpotLen", "Bases", "BioProject", "sample_accession", 
+                         "Bytes", "Center.Name", "Consent", "DATASTORE.filetype", "DATASTORE.provider", 
+                         "DATASTORE.region", "Donor", "Experiment", "GEO_Accession..exp.", "Instrument", 
+                         "LibraryLayout", "LibrarySelection", "LibrarySource", "Organism", "Platform", 
+                         "region", "ReleaseDate", "Sample.Name", "source_name", "study_accession", 
+                         "Tissue", "Kept", "Cell_type", "patient_diagnosis", "disease_state", "disease", 
+                         "prognosis", "cell_line", "developmental_stage", "Genotype", "treatment", 
+                         "cell_type", "age", "sex", "batch", "biomaterial_provider", "BioSampleModel", 
+                         "Isolate", "Library.Name", "Replicate", "health_state", "Sample_Type", "Phenotype", 
+                         "secondary_id")
 
-newstudylist$sample_accession <- newstudylist$BioSample
-```
+### Manipulating metadata -----
 
-```{r recoding ei data for ERR accessions, include=FALSE}
-#Matching eyeIntegration to ERR accession codes
+##### Matching eyeIntegration to ERR run and SAMEA sample accession codes -----
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA1"] <- 'ERR5236614')
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA10"] <- 'ERR5236615')
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA11"] <- 'ERR5236616')
@@ -84,7 +72,6 @@ eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sam
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA7"] <- 'ERR5236661')
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA8"] <- 'ERR5236662')
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA9"] <- 'ERR5236663')
-#Recoding sample accessions
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236614"] <- "SAMEA7985247")
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236615"] <- "SAMEA7985248")
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236616"] <- "SAMEA7985249")
@@ -135,14 +122,11 @@ eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236661"] <- "SAMEA7985294")
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236662"] <- "SAMEA7985295")
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236663"] <- "SAMEA7985296")
-```
 
-```{r}
+### Creating combined metadata -----
 combined_metadata <- bind_rows(eyeIntegration19_metadata, newstudylist)
-```
 
-```{r}
-#Renaming sub_tissue
+##### Editing sub_tissue data -----
 combined_metadata <- within(combined_metadata, Sub_Tissue[region == "perifovea"] <- "Retina - Macula")
 combined_metadata <- within(combined_metadata, Sub_Tissue[region == "fovea"] <- "Retina - Macula")
 combined_metadata <- within(combined_metadata, Sub_Tissue[region == "macula"] <- "Retina - Macula")
@@ -150,11 +134,6 @@ combined_metadata <- within(combined_metadata, Sub_Tissue[region == "macula"] <-
 #Providing Sub-Tissue classification
 combined_metadata <- combined_metadata %>% mutate(Sub_Tissue = ifelse(is.na(Sub_Tissue), source_name, Sub_Tissue))
 combined_metadata <- combined_metadata %>% mutate(Sub_Tissue = ifelse(is.na(Sub_Tissue), Tissue, Sub_Tissue))
-
-#Only keeping the columns in previous metadata, and adding new variables needed for samples in this iteration of eyeIntegration
-#Column names: sample accession, tissue, sub-tissue, origin, age-days, kept, study title, sample attribute, study abstract, run accession, study accession, and mapping rate
-#Additional columns for this iteration: region
-combined_metadata <- combined_metadata[,c(1:12, 33)]
 
 #Renaming sub_tissue
 combined_metadata <- within(combined_metadata, Sub_Tissue[Sub_Tissue == "choroidplexus"] <- "Choroid Plexus - Cell Line")
@@ -188,28 +167,32 @@ combined_metadata <- within(combined_metadata, Tissue[Sub_Tissue == "RPE/Choroid
 combined_metadata <- within(combined_metadata, Tissue[Sub_Tissue == "Retina - Macula"] <- "Retina")
 combined_metadata <- within(combined_metadata, Tissue[Sub_Tissue == "RPE/Choroid - Macula"] <- "RPE/Choroid")
 combined_metadata <- within(combined_metadata, Tissue[Sub_Tissue == "RPE - Adult Tissue"] <- "RPE")
-```
 
-```{r}
-#Making sure all missing data is consistently represented by column
+### Creating final combined metadata -----
 
-#Age_Days
+#Eliminating columns which were not present in previous iterations of eyeIntegration
+#Additional columns for this iteration: region
+combined_metadata <- combined_metadata[,c(1:12, 32)]
+
+### Filling in missing data -----
+
+#Age_Days Column
 combined_metadata <- within(combined_metadata, Age_Days[is.na(Age_Days)] <- ".")
 combined_metadata <- within(combined_metadata, Age_Days[Sub_Tissue == "WIBR3 hESC Choroid plexus Organoids"] <- 30)
 
-#Kept
+#Kept Column
 combined_metadata <- within(combined_metadata, Kept[Kept == "yes"] <- "Kept")
 combined_metadata <- within(combined_metadata, Kept[Kept == "yes?"] <- "removed") # "Removing" new organoid data
 combined_metadata <- within(combined_metadata, Kept[study_accession == "SRP326606"] <- "removed") # "Removing" new choroid plexus data
 
-#Region
+#Region Column
 combined_metadata <- within(combined_metadata, region[region == "macula"] <- "Macula")
 combined_metadata <- within(combined_metadata, region[region == "perifovea"] <- "Perifovea")
 combined_metadata <- within(combined_metadata, region[region == "fovea"] <- "Fovea")
 combined_metadata <- within(combined_metadata, region[grepl("Macula", Sub_Tissue) & study_accession != "SRP310948"] <- "Macula")
 combined_metadata <- within(combined_metadata, region[grepl("Peripheral", Sub_Tissue) & study_accession != "SRP310948"] <- "Peripheral")
 
-#Origin
+#Origin Column
 combined_metadata <- within(combined_metadata, Origin[study_accession == "SRP296832"] <- "Organoid")
 combined_metadata <- within(combined_metadata, Origin[Sub_Tissue == "Choroid Plexus - Cell Line"] <- "Cell Line")
 combined_metadata <- within(combined_metadata, Origin[Sub_Tissue == "RPE - Stem Cell Line"] <- " Stem Cell")
@@ -223,9 +206,7 @@ combined_metadata <- within(combined_metadata, Origin[study_accession == "SRP255
 combined_metadata <- within(combined_metadata, Origin[study_accession == "SRP257684"] <- "Adult Tissue")
 combined_metadata <- within(combined_metadata, Origin[study_accession == "SRP287152"] <- "Adult Tissue")
 combined_metadata <- within(combined_metadata, Origin[study_accession == "SRP310948"] <- "Adult Tissue")
-```
 
-```{r}
 #Adding metadata to ensure these samples are not filtered out (SRP193153)
 combined_metadata <- within(combined_metadata, study_accession[sample_accession == "SRS4653981"] <- "SRP193153")	
 combined_metadata <- within(combined_metadata, study_accession[sample_accession == "SRS4653980"] <- "SRP193153")
@@ -234,14 +215,12 @@ combined_metadata <- within(combined_metadata, study_accession[sample_accession 
 combined_metadata <- within(combined_metadata, run_accession[sample_accession == "SRS4653981"] <- "SRR8934740")
 combined_metadata <- within(combined_metadata, run_accession[sample_accession == "SRS4653980"] <- "SRR8934741")
 combined_metadata <- within(combined_metadata, run_accession[sample_accession == "SRS4653978"] <- "SRR8934743")
-```
 
-```{r}
-#Removing samples which Jason Miller contacted us about
+### Removing incorrectly labeled or misrepresented samples (Jason Miller edits) -----
 
 #SRP252574 does not exist in our study, maybe it was removed at another time?
 
-#SRP057295 
+#SRP057295
 combined_metadata <- combined_metadata %>% filter(study_accession != "SRP057295")
 
 #SRP011895 (only removed the fetal samples)
@@ -257,7 +236,7 @@ combined_metadata <- combined_metadata %>% filter(sample_accession != "SRS150909
 combined_metadata <- combined_metadata %>% filter(sample_accession != "SRS1509096")
 combined_metadata <- combined_metadata %>% filter(sample_accession != "SRS1509097")
 
-#SRP070938 (actually RPE Culture, not cell line) - Unified on biowulf so we need to remove these samples from the rse files
+#SRP070938 (actually RPE Culture, not cell line)
 combined_metadata <- combined_metadata %>% filter(sample_accession != "SRS1314626")
 combined_metadata <- combined_metadata %>% filter(sample_accession != "SRS1314627")
 
@@ -270,18 +249,14 @@ combined_metadata <- combined_metadata %>% filter(sample_accession != "SRS244575
 combined_metadata <- combined_metadata %>% filter(sample_accession != "SRS2445757")
 combined_metadata <- combined_metadata %>% filter(sample_accession != "SRS2445758")
 combined_metadata <- combined_metadata %>% filter(sample_accession != "SRS2445759")
-```
 
-```{r}
-#Removing samples which are causing issues with the Snakerail pipeline
+### Removing samples which are causing issues with the Snakerail pipeline we used to obtain our gene_count data -----
 
-combined_metadata <- combined_metadata %>% filter(study_accession != "SRP273695")
+#combined_metadata <- combined_metadata %>% filter(study_accession != "SRP273695") #Currently working on adding this data back in
 combined_metadata <- combined_metadata %>% filter(study_accession != "SRP296832")
 combined_metadata <- combined_metadata %>% filter(study_accession != "SRP315688")
-```
 
-```{r}
-#Manual annotation of studies to be used
+### Manual annotation of studies to be used -----
 
 #SRP310948
 combined_metadata <- combined_metadata <- within(combined_metadata, study_title[study_accession == "SRP310948"] <- "Human photoreceptor cells from different macular subregions have distinct transcriptional profiles")
@@ -303,10 +278,6 @@ combined_metadata <- combined_metadata <- within(combined_metadata, study_abstra
 combined_metadata <- combined_metadata <- within(combined_metadata, study_title[study_accession == "SRP255891"] <- "Transcriptional characterization of conjunctival melanoma identifies the cellular tumor microenvironment and prognostic gene signatures")
 combined_metadata <- combined_metadata <- within(combined_metadata, study_abstract[study_accession == "SRP255891"] <- "This study characterizes the transcriptome and the cellular tumor microenvironment (TME) of conjunctival melanoma (CM) and identifies prognostically relevant biomarkers. 12 formalin-fixed and paraffin-embedded CM were analyzed by MACE RNA sequencing, including six cases each with good or poor clinical outcome, the latter being defined by local recurrence and/or systemic metastases. Eight healthy conjunctival specimens served as controls. The TME of CM, as determined by bioinformatic cell type enrichment analysis, was characterized by the enrichment of melanocytes, pericytes and especially various immune cell types, such as plasmacytoid dendritic cells, natural killer T cells, B cells and mast cells. Differentially expressed genes between CM and control were mainly involved in inhibition of apoptosis, proteolysis and response to growth factors. POU3F3, BIRC5 and 7 were among the top expressed genes associated with inhibition of apoptosis. 20 genes, among them CENPK, INHA, USP33, CASP3, SNORA73B, AAR2, SNRNP48 and GPN1, were identified as prognostically relevant factors reaching high classification accuracy (area under the curve: 1.0). The present study provides new insights into the TME and the transcriptional profile of CM and additionally identifies new prognostic biomarkers. These results add new diagnostic tools and may lead to new options of targeted therapy for CM.")
 
-#SRP296832
-combined_metadata <- combined_metadata <- within(combined_metadata, study_title[study_accession == "SRP296832"] <- "Constitutive activation of canonical Wnt signaling disrupts choroid plexus epithelial fate")
-combined_metadata <- combined_metadata <- within(combined_metadata, study_abstract[study_accession == "SRP296832"] <- "The choroid plexus secretes cerebrospinal fluid and is critical for the development and function of the brain. In the telencephalon, the choroid plexus epithelium arises from the Wnt- expressing cortical hem. Canonical Wnt signaling pathway molecules such as nuclear β-CATENIN are expressed in the mouse and human embryonic choroid plexus epithelium indicating that this pathway is active. Point mutations in human β-CATENIN are known to result in the constitutive activation of canonical Wnt signaling. In a mouse model that recapitulates this perturbation, we report a loss of choroid plexus epithelial identity and an apparent transformation of this tissue to a neuronal identity. Aspects of this phenomenon are recapitulated in human embryonic stem cell derived organoids. The choroid plexus is also disrupted when β-Catenin is conditionally inactivated. Together, our results indicate that canonical Wnt signaling is required in a precise and regulated manner for normal choroid plexus development in the mammalian brain.")
-
 #SRP329409
 combined_metadata <- combined_metadata <- within(combined_metadata, study_title[study_accession == "SRP329409"] <- "Human Amniotic Epithelial Stem Cell-Derived Retinal Pigment Epithelium Cells Repair Retinal Degeneration")
 combined_metadata <- combined_metadata <- within(combined_metadata, study_abstract[study_accession == "SRP329409"] <- "Age-related macular degeneration (AMD), featured with dysfunction and loss of retinal pigment epithelium (RPE), is lacking efficient therapeutic approaches. According to our previous studies, human amniotic epithelial stem cells (hAESCs) may serve as a potential seed cell source of RPE cells for therapy because they have no ethical concerns, no tumorigenicity, and little immunogenicity. Herein, trichostatin A and nicotinamide can direct hAESCs differentiation into RPE like cells. The differentiated cells display the morphology, marker expression and cellular function of the native RPE cells, and noticeably express little MHC class II antigens and high level of HLA-G. Moreover, visual function and retinal structure of Royal College of Surgeon (RCS) rats, a classical animal model of retinal degeneration, were rescued after subretinal transplantation with the hAESCs-derived RPE like cells. Our study possibly makes some contribution to the resource of functional RPE cells for cell therapy. Subretinal transplantation of hAESCs-RPE could be an optional therapeutic strategy for retinal degeneration diseases.")
@@ -323,15 +294,10 @@ combined_metadata <- combined_metadata <- within(combined_metadata, study_abstra
 combined_metadata <- combined_metadata <- within(combined_metadata, study_title[study_accession == "SRP288670"] <- "Reversed Senescence of Retinal Pigment Epithelial Cell by Coculture With Embryonic Stem Cell via the TGFβ and PI3K Pathways")
 combined_metadata <- combined_metadata <- within(combined_metadata, study_abstract[study_accession == "SRP288670"] <- "Retinal pigment epithelium (RPE) cellular senescence is an important etiology of age-related macular degeneration (AMD). Aging interventions based on the application of stem cells to delay cellular senescence have shown good prospects in the treatment of age-related diseases. This study aimed to investigate the potential of the embryonic stem cells (ESCs) to reverse the senescence of RPE cells and to elucidate its regulatory mechanism. The hydrogen peroxide (H2O2)-mediated premature and natural passage-mediated replicative senescent RPE cells were directly cocultured with ESCs. The results showed that the proliferative capacity of premature and replicative senescent RPE cells was increased, while the positive rate of senescence-associated galactosidase (SA-β-GAL) staining and levels of reactive oxygen species (ROS) and mitochondrial membrane potential (MMP) were decreased. The positive regulatory factors of cellular senescence (p53, p21WAF1/CIP1, p16INK4a) were downregulated, while the negative regulatory factors of cellular senescence (Cyclin A2, Cyclin B1, Cyclin D1) were upregulated. Furthermore, replicative senescent RPE cells entered the S and G2/M phases from the G0/G1 phase. TGFβ (TGFB1, SMAD3, ID1, ID3) and PI3K (PIK3CG, PDK1, PLK1) pathway-related genes were upregulated in premature and replicative senescent RPE cells after ESCs application, respectively. We further treated ESCs-cocultured premature and replicative senescent RPE cells with SB531542 and LY294002 to inhibit the TGFβ and PI3K pathways, respectively, and found that p53, p21WAF1/CIP1 and p16INK4a were upregulated, while Cyclin A2, Cyclin B1, Cyclin D1, TGFβ, and PI3K pathway-related genes were downregulated, accompanied by decreased proliferation and cell cycle transition and increased positive rates of SA-β-GAL staining and levels of ROS and MMP. In conclusion, we demonstrated that ESCs can effectively reverse the senescence of premature and replicative senescent RPE cells by a direct coculture way, which may be achieved by upregulating the TGFβ and PI3K pathways, respectively, providing a basis for establishing a new therapeutic option for AMD.")
 
-#SRP315688
-combined_metadata <- combined_metadata <- within(combined_metadata, study_title[study_accession == "SRP315688"] <- "Pathogenic Effects of Mineralocorticoid Pathway Activation in
-Retinal Pigment Epithelium")
-combined_metadata <- combined_metadata <- within(combined_metadata, study_abstract[study_accession == "SRP315688"] <- "Glucocorticoids are amongst the most used drugs to treat retinal diseases of various origins. Yet, the transcriptional regulations induced by glucocorticoid receptor (GR) and mineralocorticoid receptor (MR) activation in retinal pigment epithelium cells (RPE) that form the outer blood–retina barrier are unknown. Levels of endogenous corticoids, ligands for MR and GR, were measured in human ocular media. Human RPE cells derived from induced pluripotent stem cells (iRPE) were used to analyze the pan-transcriptional regulations induced by aldosterone—an MR-specific agonist, or cortisol or cortisol + RU486—a GR antagonist. The retinal phenotype of transgenic mice that overexpress the human MR (P1.hMR) was analyzed. In the human eye, the main ligand for GR and MR is cortisol. The iRPE cells express functional GR and MR. The subset of genes regulated by aldosterone and by cortisol + RU-486, and not by cortisol alone, mimics an imbalance toward MR activation. They are involved in extracellular matrix remodeling (CNN1, MGP, AMTN), epithelial–mesenchymal transition, RPE cell proliferation and migration (ITGB3, PLAUR and FOSL1) and immune balance (TNFSF18 and PTX3). The P1.hMR mice showed choroidal vasodilation, focal alteration of the RPE/choroid interface and migration of RPE cells together with RPE barrier function alteration, similar to human retinal diseases within the pachychoroid spectrum. RPE is a corticosteroid-sensitive epithelium. MR pathway activation in the RPE regulates genes involved in barrier function, extracellular matrix, neural regulation and epithelial differentiation, which could contribute to retinal pathology.")
-
 #SRP326606
 combined_metadata <- combined_metadata <- within(combined_metadata, study_title[study_accession == "SRP326606"] <- "Capsule-dependent impact of MAPK signalling on host cell invasion and immune response during infection of the choroid plexus epithelium by Neisseria meningitidis")
 combined_metadata <- combined_metadata <- within(combined_metadata, study_abstract[study_accession == "SRP326606"] <- 
-"Background: The Gram-negative bacterium Neisseria meningitidis (Nm) can cause meningitis in humans, but the host signalling pathways manipulated by Nm during central nervous system (CNS) entry are not completely understood.
+                                                   "Background: The Gram-negative bacterium Neisseria meningitidis (Nm) can cause meningitis in humans, but the host signalling pathways manipulated by Nm during central nervous system (CNS) entry are not completely understood.
 Methods: We investigate the role of the mitogen-activated protein kinases (MAPK) Erk1/2 and p38 in an in vitro model of the blood-cerebrospinal fuid barrier (BCSFB) based on human epithelial choroid plexus (CP) papilloma (HIBCPP) cells during infection with Nm serogroup B (NmB) and serogroup C (NmC) strains. A transcriptome analysis of HIBCPP cells following infection with Nm by massive analysis of cDNA ends (MACE) was done to further characterize the cellular response to infection of the barrier.
 Results: Interestingly, whereas NmB and NmC wild type strains required active Erk1/2 and p38 pathways for infection, invasion by capsule-defcient mutants was independent of Erk1/2 and, in case of the NmB strain, of p38 activity. The transcriptome analysis of HIBCPP cells following infection with Nm demonstrated specifc regulation of genes involved in the immune response dependent on Erk1/2 signalling. Gene ontology (GO) analysis confrmed loss of MAPK signalling after Erk1/2 inhibition and revealed an additional reduction of cellular responses including NFκB and JAK-STAT signalling. Interestingly, GO terms related to TNF signalling and production of IL6 were lost specifcally following Erk1/2 inhibition during infection with wild type Nm, which correlated with the reduced infection rates by the wild type in absence of Erk1/2 signalling.
 Conclusion: Our data point towards a role of MAPK signalling during infection of the CP epithelium by Nm, which is strongly infuenced by capsule expression, and afects infection rates as well as the host cell response.")
@@ -339,18 +305,60 @@ Conclusion: Our data point towards a role of MAPK signalling during infection of
 #SRP193153
 combined_metadata <- combined_metadata <- within(combined_metadata, study_title[study_accession == "SRP193153"] <- "A Comparative Transcriptome Analysis of Human and Porcine Choroid Plexus Cells in Response to Streptococcus suis Serotype 2 Infection Points to a Role of Hypoxia")
 combined_metadata <- combined_metadata <- within(combined_metadata, study_abstract[study_accession == "SRP193153"] <- "Streptococcus suis (S. suis) is an important opportunistic pathogen, which can cause septicemia and meningitis in pigs and humans. Previous in vivo observations in S. suis-infected pigs revealed lesions at the choroid plexus (CP). In vitro experiments with primary porcine CP epithelial cells (PCPEC) and human CP epithelial papilloma (HIBCPP) cells demonstrated that S. suis can invade and traverse the CP epithelium, and that the CP contributes to the inflammatory response via cytokine expression. Here, next generation sequencing (RNA-seq) was used to compare global transcriptome profiles of PCPEC and HIBCPP cells challenged with S. suis serotype (ST) 2 infected in vitro, and of pigs infected in vivo. Identified differentially expressed genes (DEGs) were, amongst others, involved in inflammatory responses and hypoxia. The RNA-seq data were validated via quantitative PCR of selected DEGs. Employing Gene Set Enrichment Analysis (GSEA), 18, 28, and 21 enriched hallmark gene sets (GSs) were identified for infected HIBCPP cells, PCPEC, and in the CP of pigs suffering from S. suis ST2 meningitis, respectively, of which eight GSs overlapped between the three different sample sets. The majority of these GSs are involved in cellular signaling and pathways, immune response, and development, including inflammatory response and hypoxia. In contrast, suppressed GSs observed during in vitro and in vivo S. suis ST2 infections included those, which were involved in cellular proliferation and metabolic processes. This study suggests that similar cellular processes occur in infected human and porcine CP epithelial cells, especially in terms of inflammatory response.")
-```
 
-```{r}
-#Grabbing sample attributes
-attribute_finder <- function(xml_list_obj){
-  out <- list()
-  for (i in 1:length(xml_list_obj)){
-    out[[i]] <- xml_list_obj[[i]]$.attrs['attribute_name']
+#SRP119766
+combined_metadata <- combined_metadata <- within(combined_metadata, study_abstract[study_accession == "SRP119766"] <- "Clinical and genetic heterogeneity associated with retinal diseases makes stem cell-based therapies an attractive strategy for personalized medicine. However, we have limited understanding of the timing of key events in the developing human retina, and in particular the factors critical for generating the unique architecture of the fovea and surrounding macula. Here we define three key epochs in the transcriptome dynamics of human retina from fetal day (D) 52 to 150. Coincident histological analyses confirmed the cellular basis of transcriptional changes and highlighted the dramatic acceleration of development in the fovea compared to peripheral retina. Human and mouse retinal transcriptomes show remarkable similarity in developmental stages, though morphogenesis was greatly expanded in humans. Integration of DNA accessibility data allowed us to reconstruct transcriptional networks controlling photoreceptor differentiation. Our studies provide insights into human retinal development and serve as resource for molecular staging of human stem cell-derived retinal organoids. Overall design: Whole human fetal retina samples [spanning 12 time points: D52/54, D53, D57, D67, D80, D94 (2 samples), D105, D107, D115, D125, D132 and D136] or dissected retinal regions [at four time points: D59 (periphery and central, 2 samples each), D73 (periphery and fovea/macula), D96 (periphery, fovea/macula, and nasal central) and D132 (periphery, fovea/macula, and nasal central)] were used to generate RNA-seq libraries.")
+
+#SRP159246
+combined_metadata <- combined_metadata <- within(combined_metadata, study_abstract[study_accession == "SRP159246"] <- "The mechanisms underlying specification of neuronal subtypes within the human nervous system are largely unknown. The blue/S, green/M and red/L cones of the retina enable high-acuity daytime and color vision. To determine the mechanism controlling S vs. L/M fates, we studied the differentiation of human retinal organoids. Organoids and retinas have similar distributions, expression profiles, and morphologies of cone subtypes. S cones are specified first, followed by L/M cones, and thyroid hormone signaling controls this temporal switch. Dynamic expression of thyroid hormone-degrading and activating proteins within the retina ensures low signaling early to specify S cones and high signaling late to produce L/M cones. This work establishes organoids as a model for determining mechanisms of human development with promising utility for therapeutics and vision repair. Overall design: EP1 iPSC-derived organoids were analyzed at time points ranging from day 10 to day 250 of differentiation. We took samples at day 10 (n=3), day 20 (n=2), day 35 (n=3), day 69 (n=3), day 111 (n=3), day 128 (n=3), day 158 (n=2), day 173 (n=3), day 181 (n=3), day 200 (n=3), and day 250 7 (n=3). RNA from individual organoids was extracted using the Zymo Direct-zol RNA Microprep Kit (Zymo Research) according to manufacturer's instructions. Individual libraries were prepared for each sample using the Illumina TruSeq stranded mRNA kit and sequenced on an Illumina NextSeq 500 with single 200 bp reads.")
+
+#SRP323408
+combined_metadata <- combined_metadata <- within(combined_metadata, study_title[study_accession == "SRP323408"] <- "Integrated analysis of transcriptome and proteome of the human cornea and aqueous humor reveal novel biomarkers for corneal endothelial cell dysfunction")
+combined_metadata <- combined_metadata <- within(combined_metadata, study_abstract[study_accession == "SRP323408"] <- "Previous studies have reported that elevated protein levels in the aqueous humor (AH) are associated with corneal endothelial cell dysfunction (CECD), but the detailed underlying mechanism as well as specific biomarkers for CECD remain elusive. In the present study, we aimed to identify protein markers in AH directly associated with changes in Corneal endothelial cells (CECs), as AH can be easily obtained for analysis. We carried out an in-depth proteomic analysis of patient-derived AH as well as transcriptomic analysis of CECs from the same patients with bullous keratopathy (BK) resulting from CECD. We first determined differentially expressed genes (DEGs) and differentially expressed proteins (DEPs) from CECs and AH in CECD, respectively. By combining transcriptomic and proteomic analyses, 13 shared upregulated markers were observed between DEGs and DEPs. Through data integration with individual analysis via data-independent acquisition, three upregulated transcripts and proteins were identified, namely metallopeptidase inhibitor 1 (TIMP1), Fc fragment of IgG binding protein (FCGBP), and angiopoietin-related protein 7 (ANGPTL7). Furthermore, we confirmed AH biomarkers for CECD using individual proteome verification and immunoassay validation. Conclusively, our findings may provide valuable insights into the disease process and identify biofluid markers for the assessment of CEC function during BK development. Overall design: human corneal endothelium mRNA profiles of Normal and CECD were generated by deep sequencing, in triplicate, using Illumina NovaSeq 6000.")
+
+#SRP331221
+combined_metadata <- combined_metadata <- within(combined_metadata, study_title[study_accession == "SRP331221"] <- "Transcitptome of retinablastoma and retina")
+combined_metadata <- combined_metadata <- within(combined_metadata, study_abstract[study_accession == "SRP331221"] <- "RNAseq data of retinablastoma related study")
+
+### Renaming GTEX run_accessions to include external_id / Omitting repeated metadata since counts will be aggregated to the sample level in the eyeIntegration database -----
+
+#Assigning GTEX samples in the metadata an external_id
+combined_metadata <- combined_metadata %>% mutate(gtex_external_id_a = str_extract(sample_attribute, "GTEX-[A-Z0-9]+-[0-9]+-SM-[A-Z0-9]+"))
+combined_metadata <- combined_metadata %>% mutate(gtex_external_id_b = str_extract(sample_attribute, "GTEX-[A-Z0-9]+-[0-9]+-[a-zA-Z0-9]+-SM-[A-Z0-9]+"))
+combined_metadata <- combined_metadata %>% mutate(gtex_external_id_c = str_extract(sample_attribute, "K-[A-Z0-9]+-SM-[A-Z0-9]+"))
+combined_metadata <- combined_metadata %>% mutate(gtex_external_id = ifelse((is.na(gtex_external_id_a)), ifelse((is.na(gtex_external_id_b)), gtex_external_id_c, gtex_external_id_b), gtex_external_id_a))
+#Removing the temporarily produced gtex_id columns
+combined_metadata <- combined_metadata %>% select(-c(gtex_external_id_a, gtex_external_id_b, gtex_external_id_c))
+
+#The gtex_data_final csv file was generated from a separate script and contains sample level information to convert our GTEX run accessions into external_ids
+gtex_data <- vroom::vroom("gtex_data_final.csv", col_types = cols(...1 = col_skip()))
+gtex_data$external_id <- gsub("-", ".", gtex_data_final$external_id)
+#Splitting the metadata to perform the necessary join and run_accession replacement on GTEX samples
+combined_metadata_gtex <- combined_metadata %>% filter(study_accession == "SRP012682")
+combined_metadata_non_gtex <- combined_metadata %>% filter(study_accession != "SRP012682")
+#Joining sample level data
+combined_metadata_gtex_final <- gtex_data %>% select("external_id", "gtex_external_id") %>% left_join(combined_metadata_gtex, by = "gtex_external_id")
+#Rewriting the run_accessions
+combined_metadata_gtex_final$run_accession <- combined_metadata_gtex_final$external_id
+#Removing duplicates resulting from rewriting the data to the sample level
+combined_metadata_gtex_final <- combined_metadata_gtex_final[!duplicated(combined_metadata_gtex_final[,c("run_accession")]),]
+
+#Reconstructing the combined metadata and removing external_id columns as they are no longer of use
+combined_metadata <- bind_rows(combined_metadata_non_gtex, combined_metadata_gtex_final) %>% select(-c("gtex_external_id", "external_id"))
+
+write.csv(combined_metadata, "2022_metadata.csv")
+
+### Filling in sample_attribute data -----
+
+  #Grabbing sample attributes
+  attribute_finder <- function(xml_list_obj){
+    out <- list()
+    for (i in 1:length(xml_list_obj)){
+      out[[i]] <- xml_list_obj[[i]]$.attrs['attribute_name']
+    }
+    return(out)
   }
-  return(out)
-}
- 
+
 value_grabber <- function(attribute, xml_list_obj){
   for (i in 1:length(xml_list_obj)){
     if (attribute %in% (xml_list_obj[[i]]$.attrs)){
@@ -359,7 +367,7 @@ value_grabber <- function(attribute, xml_list_obj){
     }
   }
 }
- 
+
 # takes SRR run accession as input
 # and returns SAMN biosample ID
 samn_getter <- function(srr){
@@ -386,35 +394,3 @@ attribute_df_maker <- function(id){
 
 #Gathering Data
 which(is.na(combined_metadata$sample_attribute))
-
-
-
-
-```
-
-```{r}
-combined_metadata <- combined_metadata %>% mutate(gtex_external_id_a = str_extract(sample_attribute, "GTEX-[A-Z0-9]+-[0-9]+-SM-[A-Z0-9]+"))
-combined_metadata <- combined_metadata %>% mutate(gtex_external_id_b = str_extract(sample_attribute, "GTEX-[A-Z0-9]+-[0-9]+-[a-zA-Z0-9]+-SM-[A-Z0-9]+"))
-combined_metadata <- combined_metadata %>% mutate(gtex_external_id_c = str_extract(sample_attribute, "K-[A-Z0-9]+-SM-[A-Z0-9]+"))
-combined_metadata <- combined_metadata %>% mutate(gtex_external_id = ifelse((is.na(gtex_external_id_a)), ifelse((is.na(gtex_external_id_b)), gtex_external_id_c, gtex_external_id_b), gtex_external_id_a))
-
-#gtex_data_final csv file was generated from a separate analysis
-gtex_data_final <- read_csv("gtex_data_final.csv", col_types = cols(...1 = col_skip()))
-gtex_data_final$external_id <- gsub("-", ".", gtex_data_final$external_id)
-
-combined_metadata_gtex <- combined_metadata %>% filter(study_accession == "SRP012682")
-combined_metadata_non_gtex <- combined_metadata %>% filter(study_accession != "SRP012682")
-combined_metadata_no_study <- combined_metadata %>% filter(is.na(study_accession))
-
-combined_metadata_gtex_final <- gtex_data_final[,c(1,7)] %>% left_join(combined_metadata_gtex, by = "gtex_external_id") %>% unique()
-combined_metadata_gtex_final$run_accession <- combined_metadata_gtex_final$external_id
-
-combined_metadata <- bind_rows(combined_metadata_non_gtex, combined_metadata_no_study, combined_metadata_gtex_final)
-combined_metadata <- combined_metadata[,-c(14:18)]
-
-combined_metadata <- combined_metadata %>% unique()
-```
-
-```{r}
-write.csv(combined_metadata, "combined_metadata.csv")
-```

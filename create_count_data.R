@@ -1,18 +1,19 @@
-###Loading relevant packages -----
+### Loading relevant packages -----
 library(tidyverse)
 library(tibble)
 library(recount)
 library(recount3)
+library(dtplyr)
 
-#Setting the working directory and source folder
+# Setting the working directory and source folder
 setwd("/Users/parikhpp/git/EiaD_build")
 source("/Users/parikhpp/git/EiaD_build/src/create_rse2.R")
 source("/Users/parikhpp/git/EiaD_build/src/create_count_data_function.R")
 
-#Importing Metadata
-eyeIntegration22 <- read_csv("combined_metadata.csv", col_types = cols(...1 = col_skip()))
+# Importing Metadata
+eyeIntegration22 <- read_csv("2022_metadata.csv", col_types = cols(...1 = col_skip()))
 
-###Downloading count data from the recount3 database -----
+### Downloading count data from the recount3 database -----
 
 create_count_data_frames("http://duffel.rail.bio/recount3/",
                          c("SRP002881", "SRP011895", "SRP012585", "SRP015336", "SRP016140", "SRP034875",
@@ -26,7 +27,7 @@ create_count_data_frames("http://duffel.rail.bio/recount3/",
                          "aggregated_recount3_transformed_counts",
                          eyeIntegration22)
 
-###Downloading GTEX count data from the recount3 database -----
+### Downloading GTEX count data from the recount3 database -----
 
 create_gtex_count_data_frames("http://duffel.rail.bio/recount3/",
                               c("ADIPOSE_TISSUE", "MUSCLE", "BLOOD_VESSEL", "HEART", "OVARY", "UTERUS",
@@ -35,19 +36,32 @@ create_gtex_count_data_frames("http://duffel.rail.bio/recount3/",
                                 "SMALL_INTESTINE", "PROSTATE", "TESTIS", "NERVE", "PITUITARY", "BLOOD",
                                 "LIVER", "KIDNEY",   "CERVIX_UTERI", "FALLOPIAN_TUBE", "BLADDER", "BONE_MARROW"),
                               "gtex_transformed_counts",
-                              "aggregatedgtex_transformed_counts",
+                              "aggregated_gtex_transformed_counts",
                               eyeIntegration22)
 
-###Downloading count data from the "local" database (Either not included in recount3 or run locally using the Monorail RNA-seq processing pipeline) -----
+### Downloading count data from the "local" database (Either not included in recount3 or run locally using the Monorail RNA-seq processing pipeline) -----
 
 create_count_data_frames("/Users/parikhpp/recount3/recount3_local",
-                         c( "SRP018405", "SRP326606", "SRP323408", "SRP329409",
-                            "SRP331221", "SRP090027", "SRP287234", "SRP070938",
-                            "SRP090040", "SRP310948", "SRP287152", "SRP056957",
-                            "SRP288670", "E-MTAB-4377", "SRP257684", "SRP080886",
-                            "SRP300190", "SRP255891"),
+                         c("SRP018405", "SRP326606", "SRP323408", "SRP329409",
+                           "SRP331221", "SRP090027", "SRP287234", "SRP070938",
+                           "SRP090040", "SRP310948", "SRP287152", "SRP056957",
+                           "SRP288670", "E-MTAB-4377", "SRP257684", "SRP080886",
+                           "SRP300190", "SRP255891"),
                          "local_data_additions_transformed_counts",
                          "aggregated_local_data_additions_transformed_counts",
                          eyeIntegration22)
 
+### Creating final gene_counts file for use in sqlite database creation using the aggregated data -----
 
+# Calling aggregated data
+aggregated_recount3_transformed_counts <- vroom::vroom("gene_counts/aggregated_recount3_transformed_counts.csv")
+aggregated_gtex_transformed_counts <- vroom::vroom("gene_counts/aggregated_gtex_transformed_counts.csv")
+aggregated_local_data_additions_transformed_counts <- vroom::vroom("gene_counts/aggregated_local_data_additions_transformed_counts.csv")
+
+# Combine aggregated data
+gene_counts <- bind_rows(aggregated_recount3_transformed_counts,
+                         aggregated_gtex_transformed_counts,
+                         aggregated_local_data_additions_transformed_counts)
+
+### Write final gene_counts csv file -----
+write_csv(gene_counts, "gene_counts/gene_counts.csv", progress = TRUE)
