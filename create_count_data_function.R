@@ -2,7 +2,7 @@
 
 create_count_data_frames <- 
   function(recount3_library_url, projects_vector, count_file_name, 
-           aggregated_count_file_name, metadata) {
+           aggregated_count_file_name, mapping_file_name, metadata) {
   
   recount3_cache_rm()
   #Indicating which recount library the function will pull from
@@ -10,14 +10,12 @@ create_count_data_frames <-
   human_projects <- available_projects()
   #Create an empty list to gather the count data
   counts_data_list <- list()
-  
+  #Create an empty list to gather mapping information
+  mapping_data_list <- list()
   # creates list of count data frames
   for (i in projects_vector) {
-    if (recount3_library_url == "http://duffel.rail.bio/recount3/"){
-      rse_gene = create_rse_manual(i, annotation = "gencode_v29")
-    } else {
-      rse_gene = create_rse_manual2(i, annotation = "gencode_v29")
-    }
+    
+    rse_gene = create_rse_manual(i, annotation = "gencode_v29")
     assays(rse_gene)$counts <- transform_counts(rse_gene)
     
     rse_gene_counts <- recount::getTPM(rse_gene) %>% data.frame()
@@ -26,6 +24,10 @@ create_count_data_frames <-
     row.names(rse_gene_counts) <- rse_gene_counts$gene_id
     rse_gene_counts <- rse_gene_counts[,-1, drop=FALSE]
     counts_data_list[[i]] <- rse_gene_counts
+    #Input mapping data
+    mapping_data <- colData(rse_gene) %>% as.data.frame()
+    mapping_data <- mapping_data %>% mutate(across(everything(), as.character))
+    mapping_data_list[[i]] <- mapping_data
   }
   
   # confirm gene name equality across each data frame
@@ -38,18 +40,20 @@ create_count_data_frames <-
   if (sum(!apply(gene_name_matrix, 1, function(x) all(x==x[1]))) > 0){
     stop("Gene names not aligned")
   }
-  
   # cbind to make large matrix
   counts_data_frame <- do.call(cbind, counts_data_list)
   # remove name of study from column name
   colnames(counts_data_frame) <- c(str_extract(colnames(counts_data_frame), '\\SRR\\S+'))
-  
   #Add rownames back
   counts_data_frame <- counts_data_frame %>% as_tibble(rownames = 'gene_id')
   
   #Create counts file
   write.csv(counts_data_frame, 
             file = paste0("gene_counts/", count_file_name, ".csv"), row.names = FALSE)
+  #Create mapping file
+  mapping_data_frame <- bind_rows(mapping_data_list)
+  write.csv(mapping_data_frame, 
+            file = paste0("mapping_data/", mapping_file_name, ".csv"), row.names = FALSE)
   
   #Aggregating the data
   #Checking to make sure only data in the metadata is included in analysis
@@ -74,10 +78,10 @@ create_count_data_frames <-
     #Joining metadata for aggregation
     long_counts_meta <- long_counts_subset %>% left_join(metadata %>% select(sample_accession, run_accession),
                                                   by = c('run_accession'))
-    long_counts_meta <- data.table(long_counts_meta)
-    long_counts_subset_srs <- long_counts_meta[, Mean:=mean(value), by='sample_accession']
+    dt_long_counts <- data.table(long_counts_meta)
+    long_counts_srs <- dt_long_counts[, .(value=mean(value)), by=list(gene_id, sample_accession)]
     
-    aggregated_counts_data_list[[i]] <- long_counts_subset_srs
+    aggregated_counts_data_list[[i]] <- long_counts_srs
   }
   #Bind rows to create aggregated count data frame
   aggregated_counts_data <- aggregated_counts_data_list %>% bind_rows()
@@ -89,17 +93,19 @@ create_count_data_frames <-
 ### Function to create count data for GTEX samples -----
 # Since the GTEX data in recount3 is labeled differently, we will use a different function to locate and download this data
 
-create_gtex_count_data_frames <- function(recount3_library_url, projects_vector, 
-                                          count_file_name, aggregated_count_file_name, metadata) {
+create_gtex_count_data_frames <- function(projects_vector, count_file_name, 
+                                          aggregated_count_file_name, mapping_file_name, metadata) {
   
   recount3_cache_rm()
   #Indicating which recount library the function will pull from
-  options(recount3_url = recount3_library_url)
+  options(recount3_url = "http://duffel.rail.bio/recount3/")
   human_projects <- available_projects()
   #Subset to only include GTEX data
   gtex_data <- subset(human_projects, file_source == "gtex" & project_type == "data_sources")
   #Create an empty list to gather the count data
   counts_data_list <- list()
+  #Create an empty list to gather mapping information
+  mapping_data_list <- list()
   
   # creates list of count data frames
   for (i in projects_vector) {
@@ -113,6 +119,10 @@ create_gtex_count_data_frames <- function(recount3_library_url, projects_vector,
     row.names(rse_gene_counts) <- rse_gene_counts[,1]
     rse_gene_counts <- rse_gene_counts[,-1]
     counts_data_list[[i]] <- rse_gene_counts
+    #Input mapping data
+    mapping_data <- colData(rse_gene) %>% as.data.frame()
+    mapping_data <- mapping_data %>% mutate(across(everything(), as.character))
+    mapping_data_list[[i]] <- mapping_data
   }
   
   # confirm gene name equality across each data frame
@@ -140,6 +150,10 @@ create_gtex_count_data_frames <- function(recount3_library_url, projects_vector,
   #Create counts file
   write.csv(counts_data_frame, 
             file = paste0("gene_counts/", count_file_name, ".csv"), row.names = FALSE)
+  #Create mapping file
+  mapping_data_frame <- bind_rows(mapping_data_list)
+  write.csv(mapping_data_frame, 
+            file = paste0("mapping_data/", mapping_file_name, ".csv"), row.names = FALSE)
   
   #Aggregating the data
   #Checking to make sure only data in the metadata is included in analysis
@@ -154,8 +168,8 @@ create_gtex_count_data_frames <- function(recount3_library_url, projects_vector,
   #Joining metadata for aggregation
   long_counts_meta <- long_counts %>% left_join(metadata %>% select(sample_accession, run_accession),
                                                by = c('run_accession'))
-  long_counts_meta <- data.table(long_counts_meta)
-  long_counts_srs <- long_counts_meta[, Mean:=mean(value), by='sample_accession']
+  dt_long_counts <- data.table(long_counts_meta)
+  long_counts_srs <- dt_long_counts[, value:=mean(value), by=c("sample_accession", "gene_id")]
   
   aggregated_counts_data_list[[i]] <- long_counts_srs
   
@@ -165,4 +179,3 @@ create_gtex_count_data_frames <- function(recount3_library_url, projects_vector,
   write.csv(aggregated_counts_data,
             file = paste0("gene_counts/", aggregated_count_file_name, ".csv"), row.names = FALSE)
 }
-
