@@ -1,0 +1,195 @@
+---
+title: "dimension_reduction"
+author: "Prashit Parikh"
+date: "8/30/2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+chooseCRANmirror(graphics=FLASE, ind=1)
+knitr::opts_chunk$set(echo = TRUE)
+install.packages("tidyverse")
+library(tidyverse)
+install.packages("plotly")
+library(plotly)
+source("/Users/parikhpp/NEI Projects/dimension_reduction/src/create_pca.R")
+source("/Users/parikhpp/NEI Projects/dimension_reduction/src/percent_variance_explained_plot.R")
+setwd("/Users/parikhpp/NEI Projects/dimension_reduction/")
+```
+
+```{r, warning=FALSE, echo = TRUE, results = 'hide'}
+# Download metadata
+eyeIntegration22 <- read_csv("https://hpc.nih.gov/~parikhpp/EiaD/2022_metadata.csv")
+
+# Download gene counts files from the gene_counts folder in the EiaD_build repository
+gene_counts_recount3 <- 
+  vroom::vroom("/Users/parikhpp/git/EiaD_build/gene_counts/recount3_transformed_counts.csv")
+gene_counts_local_additions <- 
+  vroom::vroom("/Users/parikhpp/git/EiaD_build/gene_counts/local_data_additions_transformed_counts.csv")
+gene_counts_gtex <- 
+  vroom::vroom("/Users/parikhpp/git/EiaD_build/gene_counts/gtex_transformed_counts.csv")
+
+# Combine recount3 and local samples for PCA Analysis
+combined_gene_counts <- gene_counts_local_additions %>% left_join(gene_counts_recount3, by = "gene_id")
+# Only use recount3 samples included in eyeIntegration
+combined_gene_counts_keep <- intersect(names(combined_gene_counts), eyeIntegration22$run_accession)
+combined_gene_counts <- combined_gene_counts %>% select(one_of(c("gene_id", combined_gene_counts_keep)))
+
+#Only use samples which pass quality check
+qc_keep <- eyeIntegration22 %>% filter(Kept == "Kept") %>% pull(run_accession)
+combined_gene_counts <- combined_gene_counts %>% select(one_of(c("gene_id", qc_keep)))
+
+# Only use GTEx samples included in eyeIntegration
+gene_counts_gtex_keep <- intersect(names(gene_counts_gtex), eyeIntegration22$run_accession)
+gene_counts_gtex <- gene_counts_gtex %>% select(one_of(c("gene_id", gene_counts_gtex_keep)))
+
+#Only use samples which pass quality check
+gene_counts_gtex <- gene_counts_gtex %>% select(one_of(c("gene_id", qc_keep)))
+
+# Combine subset of gtex with remaining gene counts for PCA Analysis
+gene_counts_gtex_500 <- gene_counts_gtex[,1:500]
+gene_counts_gtex_700 <- gene_counts_gtex[,1:700]
+gene_counts_gtex_1000 <- gene_counts_gtex[,1:1000]
+gene_counts_gtex_1200 <- gene_counts_gtex[,1:1200]
+combined_gene_counts_with_gtex_500 <- combined_gene_counts %>% left_join(gene_counts_gtex_500, by = "gene_id")
+combined_gene_counts_with_gtex_700 <- combined_gene_counts %>% left_join(gene_counts_gtex_700, by = "gene_id")
+combined_gene_counts_with_gtex_1000 <- combined_gene_counts %>% left_join(gene_counts_gtex_1000, by = "gene_id")
+combined_gene_counts_with_gtex_1200 <- combined_gene_counts %>% left_join(gene_counts_gtex_1200, by = "gene_id")
+
+#Color palette for visualization
+color_palette <- c(jcolors::jcolors(), pals::alphabet2(), jcolors::jcolors(), pals::alphabet()) %>% unname()
+```
+
+Run PCA Analysis for different data to see trends
+
+```{r, warning=FALSE, echo = TRUE, results = 'hide'}
+# recount3 + local_data_additions
+create_pca(combined_gene_counts, eyeIntegration22, "ocular_pca", "ocular_pca_sdev")
+# recount3 + local_data_additions + 500 GTEx samples
+create_pca(combined_gene_counts_with_gtex_500, eyeIntegration22, "combined_pca_with_500_gtex", "combined_pca_with_500_gtex_sdev")
+# recount3 + local_data_additions + 700 GTEx samples
+create_pca(combined_gene_counts_with_gtex_700, eyeIntegration22, "combined_pca_with_700_gtex", "combined_pca_with_700_gtex_sdev")
+# recount3 + local_data_additions + 1000 GTEx samples
+create_pca(combined_gene_counts_with_gtex_1000, eyeIntegration22, "combined_pca_with_1000_gtex", "combined_pca_with_1000_gtex_sdev")
+# recount3 + local_data_additions + 1200 GTEx samples
+create_pca(combined_gene_counts_with_gtex_1200, eyeIntegration22, "combined_pca_with_1200_gtex", "combined_pca_with_1200_gtex_sdev")
+```
+
+Plotting our results
+
+```{r, warning=FALSE, echo = TRUE, results = 'hide'}
+# Import pca output data
+ocular_pca <- read.csv("pca_output/ocular_pca.csv")
+combined_pca_with_500_gtex <- read.csv("pca_output/combined_pca_with_500_gtex.csv")
+combined_pca_with_700_gtex <- read.csv("pca_output/combined_pca_with_700_gtex.csv")
+combined_pca_with_1000_gtex <- read.csv("pca_output/combined_pca_with_1000_gtex.csv")
+combined_pca_with_1200_gtex <- read.csv("pca_output/combined_pca_with_1200_gtex.csv")
+# Import sdev data
+ocular_pca_sdev <- read.csv("pca_output/ocular_pca_sdev.csv")
+combined_pca_with_500_gtex_sdev <- read.csv("pca_output/combined_pca_with_500_gtex_sdev.csv")
+combined_pca_with_700_gtex_sdev <- read.csv("pca_output/combined_pca_with_700_gtex_sdev.csv")
+combined_pca_with_1000_gtex_sdev <- read.csv("pca_output/combined_pca_with_1000_gtex_sdev.csv")
+combined_pca_with_1200_gtex_sdev <- read.csv("pca_output/combined_pca_with_1200_gtex_sdev.csv")
+```
+
+Ocular Data Plot
+
+```{r, warning=FALSE}
+ocular_pca_plot <- ocular_pca %>% 
+  plot_ly(x = ~PC1, y = ~PC2, mode = 'markers', color = ~ocular_pca$Tissue,
+          colors = color_palette, type = 'scatter', text = ~ocular_pca$run_accession) %>%
+  layout(legend = list(title=list(text='Tissue'), orientation = 'h', y = -0.2),
+         xaxis = list(
+            zerolinecolor = 'black',
+            zerolinewidth = 0.5,
+            gridcolor = 'black'),
+          yaxis = list(
+            zerolinecolor = 'black',
+            zerolinewidth = 0.5,
+            gridcolor = 'black'))
+ocular_pca_plot
+
+plot_variance_explained(ocular_pca_sdev$x)
+```
+
+Ocular Data with 500 GTEx Samples
+
+```{r, warning=FALSE}
+combined_pca_with_500_gtex_plot <- combined_pca_with_500_gtex %>% 
+  plot_ly(x = ~PC1, y = ~PC2, mode = 'markers', color = ~combined_pca_with_500_gtex$Tissue,
+          colors = color_palette, type = 'scatter', text = ~combined_pca_with_500_gtex$run_accession) %>%
+  layout(legend = list(title=list(text='Tissue'), orientation = 'h', y = -0.2),
+         xaxis = list(
+            zerolinecolor = 'black',
+            zerolinewidth = 0.5,
+            gridcolor = 'black'),
+          yaxis = list(
+            zerolinecolor = 'black',
+            zerolinewidth = 0.5,
+            gridcolor = 'black'))
+combined_pca_with_500_gtex_plot
+
+plot_variance_explained(combined_pca_with_500_gtex_sdev$x)
+```
+
+Ocular Data with 700 GTEx Samples
+
+```{r, warning=FALSE}
+combined_pca_with_700_gtex_plot <- combined_pca_with_700_gtex %>% 
+  plot_ly(x = ~PC1, y = ~PC2, mode = 'markers', color = ~combined_pca_with_700_gtex$Tissue,
+          colors = color_palette, type = 'scatter', text = ~combined_pca_with_700_gtex$run_accession) %>%
+  layout(legend = list(title=list(text='Tissue'), orientation = 'h', y = -0.2),
+         xaxis = list(
+            zerolinecolor = 'black',
+            zerolinewidth = 0.5,
+            gridcolor = 'black'),
+          yaxis = list(
+            zerolinecolor = 'black',
+            zerolinewidth = 0.5,
+            gridcolor = 'black'))
+combined_pca_with_700_gtex_plot
+
+plot_variance_explained(combined_pca_with_700_gtex_sdev$x)
+```
+
+Ocular Data with 1000 GTEx Samples
+
+```{r, warning=FALSE}
+combined_pca_with_1000_gtex_plot <- combined_pca_with_1000_gtex %>% 
+  plot_ly(x = ~PC1, y = ~PC2, mode = 'markers', color = ~combined_pca_with_1000_gtex$Tissue,
+          colors = color_palette, type = 'scatter', text = ~combined_pca_with_1000_gtex$run_accession) %>%
+  layout(legend = list(title=list(text='Tissue'), orientation = 'h', y = -0.2),
+         xaxis = list(
+            zerolinecolor = 'black',
+            zerolinewidth = 0.5,
+            gridcolor = 'black'),
+          yaxis = list(
+            zerolinecolor = 'black',
+            zerolinewidth = 0.5,
+            gridcolor = 'black'))
+combined_pca_with_1000_gtex_plot
+
+plot_variance_explained(combined_pca_with_1000_gtex_sdev$x)
+```
+
+Ocular Data with 1200 GTEx Samples
+
+```{r, warning=FALSE}
+combined_pca_with_1200_gtex_plot <- combined_pca_with_1200_gtex %>% 
+  plot_ly(x = ~PC1, y = ~PC2, mode = 'markers', color = ~combined_pca_with_1200_gtex$Tissue,
+          colors = color_palette, type = 'scatter', text = ~combined_pca_with_1200_gtex$run_accession) %>%
+  layout(legend = list(title=list(text='Tissue'), orientation = 'h', y = -0.2),
+         xaxis = list(
+            zerolinecolor = 'black',
+            zerolinewidth = 0.5,
+            gridcolor = 'black'),
+          yaxis = list(
+            zerolinecolor = 'black',
+            zerolinewidth = 0.5,
+            gridcolor = 'black'))
+combined_pca_with_1200_gtex_plot
+
+plot_variance_explained(combined_pca_with_1200_gtex_sdev$x)
+```
