@@ -2,6 +2,51 @@
 library(XML)
 library(reutils)
 library(tidyverse)
+setwd("/Users/parikhpp/NEI Projects/metadata_creation/")
+
+### Adding necessary functions -----
+
+#Grabbing sample attributes
+attribute_finder <- function(xml_list_obj){
+  out <- list()
+  for (i in 1:length(xml_list_obj)){
+    out[[i]] <- xml_list_obj[[i]]$.attrs['attribute_name']
+  }
+  return(out)
+}
+
+value_grabber <- function(attribute, xml_list_obj){
+  for (i in 1:length(xml_list_obj)){
+    if (attribute %in% (xml_list_obj[[i]]$.attrs)){
+      out <- xml_list_obj[[i]]$text
+      return(out)
+    }
+  }
+}
+
+# takes SRR run accession as input
+# and returns SAMN biosample ID
+samn_getter <- function(srr){
+  (efetch(c(srr), db = 'sra', retmode = 'xml'))$content %>% str_extract(., 'SAMN\\d+')
+}
+
+# uses NCBI sample attribute
+# example: SAMN05784633
+attribute_df_maker <- function(id){
+  # fetch xml object from NCBI
+  eutil_grab <- efetch(uid = id, db = 'biosample', retmode = 'xml')
+  # extract attributes, convert to list
+  xml_list_obj <- eutil_grab[["//Attributes"]] %>% XML::xmlToList()
+  biosample_title <-  (eutil_grab[["//Description"]]%>% XML::xmlToList())$Title
+  # scan through list obj and find all attributes
+  attribute_df <-  attribute_finder(xml_list_obj) %>% as.character() %>% data.frame()
+  colnames(attribute_df)[1] <- 'attribute'
+  # grab the attributes and stick into DF
+  attribute_df <- attribute_df %>% rowwise() %>% mutate(value = value_grabber(attribute, xml_list_obj))
+  attribute_df$id = id
+  attribute_df <- bind_rows(attribute_df, c(attribute = 'biosample_title', value = biosample_title, 'id' = id))
+  return(attribute_df)
+}
 
 ### Creating eyeIntegration22 -----
 eyeIntegration19_metadata <- vroom::vroom("https://hpc.nih.gov/~mcgaugheyd/eyeIntegration/2019_metadata_04.tsv.gz",
@@ -21,7 +66,7 @@ names(newstudylist) <- c("run_accession", "Assay.Type", "AvgSpotLen", "Bases", "
 
 ### Manipulating metadata -----
 
-##### Matching eyeIntegration to ERR run and SAMEA sample accession codes -----
+##### Matching eyeIntegration E-MTAB-4377 to ERR run and ERS sample accession codes -----
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA1"] <- 'ERR5236614')
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA10"] <- 'ERR5236615')
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA11"] <- 'ERR5236616')
@@ -72,56 +117,92 @@ eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sam
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA7"] <- 'ERR5236661')
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA8"] <- 'ERR5236662')
 eyeIntegration19_metadata <- within(eyeIntegration19_metadata, run_accession[sample_accession == "E.MTAB.4377.RNA9"] <- 'ERR5236663')
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236614"] <- "SAMEA7985247")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236615"] <- "SAMEA7985248")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236616"] <- "SAMEA7985249")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236617"] <- "SAMEA7985250")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236618"] <- "SAMEA7985251")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236619"] <- "SAMEA7985252")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236620"] <- "SAMEA7985253")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236621"] <- "SAMEA7985254")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236622"] <- "SAMEA7985255")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236623"] <- "SAMEA7985256")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236624"] <- "SAMEA7985257")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236625"] <- "SAMEA7985258")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236626"] <- "SAMEA7985259")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236627"] <- "SAMEA7985260")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236628"] <- "SAMEA7985261")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236629"] <- "SAMEA7985262")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236630"] <- "SAMEA7985263")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236631"] <- "SAMEA7985264")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236632"] <- "SAMEA7985265")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236633"] <- "SAMEA7985266")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236634"] <- "SAMEA7985267")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236635"] <- "SAMEA7985268")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236636"] <- "SAMEA7985269")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236637"] <- "SAMEA7985270")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236638"] <- "SAMEA7985271")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236639"] <- "SAMEA7985272")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236640"] <- "SAMEA7985273")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236641"] <- "SAMEA7985274")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236642"] <- "SAMEA7985275")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236643"] <- "SAMEA7985276")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236644"] <- "SAMEA7985277")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236645"] <- "SAMEA7985278")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236646"] <- "SAMEA7985279")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236647"] <- "SAMEA7985280")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236648"] <- "SAMEA7985281")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236649"] <- "SAMEA7985282")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236650"] <- "SAMEA7985283")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236651"] <- "SAMEA7985284")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236652"] <- "SAMEA7985285")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236653"] <- "SAMEA7985286")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236654"] <- "SAMEA7985287")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236655"] <- "SAMEA7985288")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236656"] <- "SAMEA7985289")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236657"] <- "SAMEA7985290")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236658"] <- "SAMEA7985291")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236659"] <- "SAMEA7985292")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236660"] <- "SAMEA7985293")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236661"] <- "SAMEA7985294")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236662"] <- "SAMEA7985295")
-eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236663"] <- "SAMEA7985296")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236614"] <- "ERS5672529")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236615"] <- "ERS5672530")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236616"] <- "ERS5672531")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236617"] <- "ERS5672532")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236618"] <- "ERS5672533")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236619"] <- "ERS5672534")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236620"] <- "ERS5672535")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236621"] <- "ERS5672536")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236622"] <- "ERS5672537")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236623"] <- "ERS5672538")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236624"] <- "ERS5672539")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236625"] <- "ERS5672540")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236626"] <- "ERS5672541")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236627"] <- "ERS5672542")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236628"] <- "ERS5672543")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236629"] <- "ERS5672544")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236630"] <- "ERS5672545")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236631"] <- "ERS5672546")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236632"] <- "ERS5672547")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236633"] <- "ERS5672548")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236634"] <- "ERS5672549")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236635"] <- "ERS5672550")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236636"] <- "ERS5672551")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236637"] <- "ERS5672552")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236638"] <- "ERS5672553")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236639"] <- "ERS5672554")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236640"] <- "ERS5672555")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236641"] <- "ERS5672556")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236642"] <- "ERS5672557")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236643"] <- "ERS5672558")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236644"] <- "ERS5672559")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236645"] <- "ERS5672560")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236646"] <- "ERS5672561")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236647"] <- "ERS5672562")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236648"] <- "ERS5672563")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236649"] <- "ERS5672564")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236650"] <- "ERS5672565")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236651"] <- "ERS5672566")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236652"] <- "ERS5672567")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236653"] <- "ERS5672568")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236654"] <- "ERS5672569")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236655"] <- "ERS5672570")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236656"] <- "ERS5672571")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236657"] <- "ERS5672572")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236658"] <- "ERS5672573")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236659"] <- "ERS5672574")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236660"] <- "ERS5672575")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236661"] <- "ERS5672576")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236662"] <- "ERS5672577")
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, sample_accession[run_accession == "ERR5236663"] <- "ERS5672578")
+
+#Changing the E-MTAB-4377 accession to its associated ERP126780 accession
+eyeIntegration19_metadata <- within(eyeIntegration19_metadata, study_accession[study_accession == "E-MTAB-4377"] <- "ERP126780")
+
+##### Matching the SAMN sample accessions from eyeIntegration to the SRS format
+
+#Obtain order of SAMN accessions
+SAMN_accessions <- newstudylist$sample_accession
+#Find associated SRS associations
+SRS_accessions <- c("SRS8476047", "SRS8476048", "SRS8476049", "SRS8476039", "SRS8476038", "SRS8476040",
+                    "SRS8476041", "SRS8476042", "SRS8476043", "SRS8476044", "SRS8476045", "SRS8476046",
+                    "SRS7504865", "SRS7504866", "SRS7504867", "SRS7504868", "SRS7504869", "SRS7504870",
+                    "SRS7961495", "SRS7961496", "SRS7961497", "SRS6509681", "SRS6509682", "SRS6509683",
+                    "SRS6509684", "SRS6509685", "SRS6509686", "SRS6509687", "SRS6509688", "SRS6509689",
+                    "SRS6509690", "SRS6509691", "SRS6509692", "SRS6509693", "SRS6509694", "SRS6509695",
+                    "SRS6509696", "SRS6509697", "SRS6457374", "SRS6457373", "SRS6457375", "SRS6457376",
+                    "SRS6457377", "SRS6457378", "SRS6457379", "SRS6457380", "SRS7842170", "SRS7842171",
+                    "SRS7842172", "SRS7842173", "SRS7842174", "SRS7842175", "SRS7842176", "SRS7842177",
+                    "SRS7842178", "SRS7842179", "SRS7842180", "SRS7842181", "SRS9558354", "SRS9558355",
+                    "SRS9558356", "SRS9761682", "SRS9761683", "SRS9761684", "SRS9761685", "SRS9761686",
+                    "SRS9761687", "SRS9761688", "SRS9761689", "SRS9761691", "SRS9761692", "SRS9761690",
+                    "SRS9761693", "SRS9761694", "SRS9761695", "SRS9761698", "SRS9761697", "SRS9761699",
+                    "SRS9761700", "SRS9761705", "SRS9761701", "SRS9761702", "SRS9761703", "SRS9761704",
+                    "SRS9761706", "SRS9761707", "SRS9761709", "SRS9761696", "SRS9761708", "SRS7512844",
+                    "SRS7512845", "SRS7512846", "SRS7512847", "SRS7512848", "SRS7512849", "SRS7512850",
+                    "SRS7512851", "SRS7512852", "SRS7512853", "SRS7512854", "SRS7512855", "SRS7512856",
+                    "SRS7590278", "SRS7590277", "SRS7590276", "SRS7590275", "SRS7590274", "SRS7590273",
+                    "SRS7590272", "SRS7590271", "SRS7590270", "SRS7590269", "SRS7590268", "SRS7590267",
+                    "SRS7590266", "SRS7590265", "SRS7590264", "SRS8746366", "SRS8746367", "SRS8746370",
+                    "SRS8746369", "SRS8746376", "SRS8746379", "SRS8746381", "SRS8746365", "SRS8746368",
+                    "SRS8746372", "SRS8746371", "SRS8746373", "SRS8746374", "SRS8746375", "SRS8746377",
+                    "SRS8746378", "SRS8746380", "SRS8746382", "SRS9166479", "SRS9166480", "SRS9166481",
+                    "SRS9166482", "SRS9373988", "SRS9373979", "SRS9373978", "SRS9688109", "SRS9688108",
+                    "SRS9688107", "SRS9688106", "SRS9688105")
+#Replace
+newstudylist$sample_accession <- SRS_accessions
 
 ### Creating combined metadata -----
 combined_metadata <- bind_rows(eyeIntegration19_metadata, newstudylist)
@@ -181,7 +262,7 @@ combined_metadata <- within(combined_metadata, Age_Days[is.na(Age_Days)] <- ".")
 combined_metadata <- within(combined_metadata, Age_Days[Sub_Tissue == "WIBR3 hESC Choroid plexus Organoids"] <- 30)
 
 #Kept Column
-combined_metadata <- within(combined_metadata, Kept[Kept == "yes"] <- "Kept")
+# combined_metadata <- within(combined_metadata, Kept[Kept == "yes"] <- "Kept")
 combined_metadata <- within(combined_metadata, Kept[Kept == "yes?"] <- "removed") # "Removing" new organoid data
 combined_metadata <- within(combined_metadata, Kept[study_accession == "SRP326606"] <- "removed") # "Removing" new choroid plexus data
 
@@ -331,8 +412,8 @@ combined_metadata <- combined_metadata %>% mutate(gtex_external_id = ifelse((is.
 combined_metadata <- combined_metadata %>% select(-c(gtex_external_id_a, gtex_external_id_b, gtex_external_id_c))
 
 #The gtex_data_final csv file was generated from a separate script and contains sample level information to convert our GTEX run accessions into external_ids
-gtex_data <- vroom::vroom("gtex_data_final.csv", col_types = cols(...1 = col_skip()))
-gtex_data$external_id <- gsub("-", ".", gtex_data_final$external_id)
+gtex_data <- vroom::vroom("/Users/parikhpp/NEI Projects/bigwigs/gtex_data_final.csv", col_types = cols(...1 = col_skip()))
+gtex_data$external_id <- gsub("-", ".", gtex_data$external_id)
 #Splitting the metadata to perform the necessary join and run_accession replacement on GTEX samples
 combined_metadata_gtex <- combined_metadata %>% filter(study_accession == "SRP012682")
 combined_metadata_non_gtex <- combined_metadata %>% filter(study_accession != "SRP012682")
@@ -346,51 +427,123 @@ combined_metadata_gtex_final <- combined_metadata_gtex_final[!duplicated(combine
 #Reconstructing the combined metadata and removing external_id columns as they are no longer of use
 combined_metadata <- bind_rows(combined_metadata_non_gtex, combined_metadata_gtex_final) %>% select(-c("gtex_external_id", "external_id"))
 
-write.csv(combined_metadata, "2022_metadata.csv")
-
 ### Filling in sample_attribute data -----
 
-  #Grabbing sample attributes
-  attribute_finder <- function(xml_list_obj){
-    out <- list()
-    for (i in 1:length(xml_list_obj)){
-      out[[i]] <- xml_list_obj[[i]]$.attrs['attribute_name']
-    }
-    return(out)
-  }
+#Replacing blank SRR attributes
+srr_blank_attributes <- which(is.na(combined_metadata$sample_attribute) & grepl("SRR", combined_metadata$run_accession))
 
-value_grabber <- function(attribute, xml_list_obj){
-  for (i in 1:length(xml_list_obj)){
-    if (attribute %in% (xml_list_obj[[i]]$.attrs)){
-      out <- xml_list_obj[[i]]$text
-      return(out)
-    }
-  }
+for (i in 1:length(srr_blank_attributes)) {
+  attribute_dataframe <-
+    combined_metadata[srr_blank_attributes[i],] %>% 
+    pull("run_accession") %>% 
+    samn_getter() %>% 
+    attribute_df_maker() %>%
+    select(-id)
+  sample_attr <- paste(do.call(paste, c(attribute_dataframe, sep = ": ")), collapse = " || ")
+  #Make final attribute
+  combined_metadata <- combined_metadata %>% mutate(sample_attribute = sample_attr)
+  Sys.sleep(5)
 }
 
-# takes SRR run accession as input
-# and returns SAMN biosample ID
-samn_getter <- function(srr){
-  (efetch(c(srr), db = 'sra', retmode = 'xml'))$content %>% str_extract(., 'SAMN\\d+')
-}
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236614"] <- "Name: Sample 1_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236615"] <- "Name: Sample 10_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236616"] <- "Name: Sample 11_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236617"] <- "Name: Sample 12_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236618"] <- "Name: Sample 13_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236619"] <- "Name: Sample 14_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236620"] <- "Name: Sample 15_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236621"] <- "Name: Sample 16_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236622"] <- "Name: Sample 17_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236623"] <- "Name: Sample 18_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236624"] <- "Name: Sample 19_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236625"] <- "Name: Sample 2_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236626"] <- "Name: Sample 20_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236627"] <- "Name: Sample 21_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236628"] <- "Name: Sample 22_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236629"] <- "Name: Sample 23_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236630"] <- "Name: Sample 24_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236631"] <- "Name: Sample 25_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236632"] <- "Name: Sample 26_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236633"] <- "Name: Sample 27_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236634"] <- "Name: Sample 28_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236635"] <- "Name: Sample 29_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236636"] <- "Name: Sample 3_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236637"] <- "Name: Sample 30_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236638"] <- "Name: Sample 31_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236639"] <- "Name: Sample 32_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236640"] <- "Name: Sample 33_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236641"] <- "Name: Sample 34_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236642"] <- "Name: Sample 35_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236643"] <- "Name: Sample 36_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236644"] <- "Name: Sample 37_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236645"] <- "Name: Sample 38_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236646"] <- "Name: Sample 39_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236647"] <- "Name: Sample 4_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236648"] <- "Name: Sample 40_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236649"] <- "Name: Sample 41_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236650"] <- "Name: Sample 42_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236651"] <- "Name: Sample 43_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236652"] <- "Name: Sample 44_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236653"] <- "Name: Sample 45_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236654"] <- "Name: Sample 46_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236655"] <- "Name: Sample 47_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236656"] <- "Name: Sample 48_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236657"] <- "Name: Sample 49_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236658"] <- "Name: Sample 5_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236659"] <- "Name: Sample 50_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236660"] <- "Name: Sample 6_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236661"] <- "Name: Sample 7_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236662"] <- "Name: Sample 8_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
+combined_metadata <- within(combined_metadata, sample_attribute[run_accession == "ERR5236663"] <- "Name: Sample 9_p || Instrument: Illumina HiSeq 1000 || Strategy: RNA-Seq || Source: TRANSCRIPTOMIC || Selection: cDNA || Layout: PAIRED")
 
-# uses NCBI sample attribute
-# example: SAMN05784633
-attribute_df_maker <- function(id){
-  # fetch xml object from NCBI
-  eutil_grab <- efetch(uid = id, db = 'biosample', retmode = 'xml')
-  # extract attributes, convert to list
-  xml_list_obj <- eutil_grab[["//Attributes"]] %>% XML::xmlToList()
-  biosample_title <-  (eutil_grab[["//Description"]]%>% XML::xmlToList())$Title
-  # scan through list obj and find all attributes
-  attribute_df <-  attribute_finder(xml_list_obj) %>% as.character() %>% data.frame()
-  colnames(attribute_df)[1] <- 'attribute'
-  # grab the attributes and stick into DF
-  attribute_df <- attribute_df %>% rowwise() %>% mutate(value = value_grabber(attribute, xml_list_obj))
-  attribute_df$id = id
-  attribute_df <- bind_rows(attribute_df, c(attribute = 'biosample_title', value = biosample_title, 'id' = id))
-  return(attribute_df)
-}
+### Quality Check -----
 
-#Gathering Data
-which(is.na(combined_metadata$sample_attribute))
+# Import mapping data for all samples
+mapping_data <- vroom::vroom("/Users/parikhpp/git/EiaD_build/mapping_data/mapping_data.csv")
+mapping_data$external_id <- gsub('-','.', mapping_data$external_id)
+
+#Only samples in eyeIntegration
+mapping_data_keep <- intersect(mapping_data$external_id, eyeIntegration22$run_accession)
+mapping_data_final <- mapping_data[mapping_data$external_id %in% mapping_data_keep,]
+
+# intron percentage (high is bad)
+mapping_data %>%
+  left_join(combined_metadata, by = c('external_id' = 'run_accession')) %>%
+  mutate(Tissue = case_when(Tissue == 'RPE' ~ 'RPE/Choroid', TRUE ~ Tissue)) %>%
+  filter(!grepl("GTEX", external_id)) %>%
+  ggplot(aes(x=recount_qc.intron_sum_., y = Tissue)) +
+  ggridges::geom_density_ridges2() +
+  cowplot::theme_cowplot()
+
+# alignment percentage (high is good)
+mapping_data %>% mutate(align_perc = (recount_qc.star.all_mapped_reads %>% as.numeric()) / (recount_qc.star.number_of_input_reads %>% as.numeric())) %>%
+  left_join(combined_metadata, by = c('external_id' = 'run_accession')) %>%
+  mutate(Tissue = case_when(Tissue == 'RPE' ~ 'RPE/Choroid', TRUE ~ Tissue)) %>%
+  filter(!grepl("GTEX", external_id)) %>%
+  ggplot(aes(x=align_perc, y = Tissue)) +
+  ggridges::geom_density_ridges2() +
+  cowplot::theme_cowplot()
+
+srr_keep <- mapping_data %>%
+  mutate(align_perc = (recount_qc.star.all_mapped_reads %>% as.numeric()) / (recount_qc.star.number_of_input_reads %>% as.numeric())) %>%
+  filter(align_perc > 0.6, (recount_qc.intron_sum_. %>% as.numeric()) < 20) %>%
+  pull(external_id)
+srr_keep <- gsub('-','.', srr_keep)
+
+low_alignment_percentage <- mapping_data %>%
+  mutate(align_perc = (recount_qc.star.all_mapped_reads %>% as.numeric()) / (recount_qc.star.number_of_input_reads %>% as.numeric())) %>%
+  filter(align_perc < 0.6) %>%
+  pull(external_id)
+
+high_intron_percentage <- mapping_data %>%
+  filter(recount_qc.intron_sum_. %>% as.numeric() > 20) %>%
+  pull(external_id)
+
+# Labeling samples to use and discard
+combined_metadata_final <- combined_metadata %>% mutate(Kept = case_when(run_accession %in% srr_keep ~ 'Kept',
+                                                                         run_accession %in% low_alignment_percentage ~ 'low alignment percentage',
+                                                                         run_accession %in% high_intron_percentage ~ 'high_intron_percentage'))
+
+### Creating final metadata file for publication -----
+
+# write.csv(combined_metadata_final, "2022_metadata.csv", row.names = FALSE)
